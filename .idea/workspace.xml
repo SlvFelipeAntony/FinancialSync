@@ -5,8 +5,35 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3ac1fda1-975e-4ebb-9bdb-71e48bd87a3c" name="Changes" comment="Flutter Configuration">
+      <change afterPath="$PROJECT_DIR$/lib/database/database_helper.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/models/account_model.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/models/credit_card_model.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/models/credit_transaction_model.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/models/transaction_model.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/models/user_model.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/account_form_page.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/account_list_page.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/credit_card_form_page.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/credit_card_list_page.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/credit_transaction_form_page.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/home_page.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/invoice_view_page.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/login_page.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/login_screen.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/profile_page.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/register_page.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/transaction_form_page.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/transaction_list_page.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/model.mwb" beforeDir="false" afterPath="$PROJECT_DIR$/database/model.mwb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/financialsync.iml" beforeDir="false" afterPath="$PROJECT_DIR$/financialsync.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/main.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/widget_test.dart" beforeDir="false" afterPath="$PROJECT_DIR$/test/widget_test.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -16,26 +43,36 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Dart File" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "SlvFelipeAntony"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;SlvFelipeAntony&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/SlvFelipeAntony/FinancialSync.git",
-    "accountId": "4b3bfaf8-2e66-4ed5-bdd5-0f958c5ecd90"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/SlvFelipeAntony/FinancialSync.git&quot;,
+    &quot;accountId&quot;: &quot;4b3bfaf8-2e66-4ed5-bdd5-0f958c5ecd90&quot;
   }
-}]]></component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 3,
-  "fromUser": false
-}]]></component>
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 3,
+  &quot;fromUser&quot;: false
+}</component>
   <component name="ProjectId" id="3CraW8OH1whHuqHvndwfvWBmn7x" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -52,6 +89,7 @@
     "cidr.known.project.marker": "true",
     "dart.analysis.tool.window.visible": "false",
     "git-widget-placeholder": "main",
+    "io.flutter.project.isFirstOpen": "true",
     "io.flutter.reload.alreadyRun": "true",
     "kotlin-language-version-configured": "true",
     "project.structure.last.edited": "Project",
@@ -61,6 +99,12 @@
     "show.migrate.to.gradle.popup": "false"
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\slvfe\Documents\GitHub\FinancialSync\lib\models" />
+      <recent name="C:\Users\slvfe\Documents\GitHub\FinancialSync\lib\database" />
+    </key>
+  </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="3ac1fda1-975e-4ebb-9bdb-71e48bd87a3c" name="Changes" comment="" />
