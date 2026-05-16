@@ -9,29 +9,26 @@ class TransactionListPage extends StatefulWidget {
 }
 
 class _TransactionListPageState extends State<TransactionListPage> {
-  String _filter = 'todos'; // 'todos', 'entrada', 'saida'
+  String _filter = 'todos'; // Opções: 'todos', 'entrada', 'saida'
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Minhas Transações'),
+        title: const Text('Histórico de Transações'),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
+          preferredSize: const Size.fromHeight(50),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildFilterChip('Todos', 'todos'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Entradas', 'entrada'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Saídas', 'saida'),
-                ],
-              ),
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildFilterChip('Todas', 'todos'),
+                const SizedBox(width: 8),
+                _buildFilterChip('Entradas', 'entrada'),
+                const SizedBox(width: 8),
+                _buildFilterChip('Saídas', 'saida'),
+              ],
             ),
           ),
         ),
@@ -51,33 +48,26 @@ class _TransactionListPageState extends State<TransactionListPage> {
             itemCount: transactions.length,
             itemBuilder: (context, index) {
               final t = transactions[index];
-              final isEntrada = t['type'] == 'entrada';
+              final isIncome = t['type'] == 'entrada';
 
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: isEntrada ? Colors.green.withOpacity(0.2) : Colors.red.withOpacity(0.2),
+                    backgroundColor: isIncome ? Colors.green[50] : Colors.red[50],
                     child: Icon(
-                      isEntrada ? Icons.arrow_upward : Icons.arrow_downward,
-                      color: isEntrada ? Colors.green : Colors.red,
+                      isIncome ? Icons.trending_up : Icons.trending_down,
+                      color: isIncome ? Colors.green : Colors.red,
                     ),
                   ),
                   title: Text(t['description']),
                   subtitle: Text("${t['category']} • ${t['account_name']}"),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        "${isEntrada ? '+' : '-'} R\$ ${t['value'].toStringAsFixed(2)}",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: isEntrada ? Colors.green : Colors.red,
-                        ),
-                      ),
-                      Text(t['date'], style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                    ],
+                  trailing: Text(
+                    "${isIncome ? '+' : '-'} R\$ ${t['value'].toStringAsFixed(2)}",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isIncome ? Colors.green : Colors.red,
+                    ),
                   ),
                 ),
               );

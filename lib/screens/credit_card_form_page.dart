@@ -51,18 +51,19 @@ class _CreditCardFormPageState extends State<CreditCardFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Novo Cartão')),
-      body: Padding(
+      appBar: AppBar(title: const Text('Novo Cartão de Crédito')),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: ListView(
+          child: Column(
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Nome do Cartão (Ex: Black, Platinum)'),
+                decoration: const InputDecoration(labelText: 'Nome do Cartão (Ex: Nubank Black)'),
                 validator: (v) => v!.isEmpty ? 'Obrigatório' : null,
               ),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _digitsController,
                 decoration: const InputDecoration(labelText: 'Últimos 4 dígitos'),
@@ -75,6 +76,7 @@ class _CreditCardFormPageState extends State<CreditCardFormPage> {
                 decoration: const InputDecoration(labelText: 'Limite Total (R\$)'),
                 keyboardType: TextInputType.number,
               ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -94,19 +96,18 @@ class _CreditCardFormPageState extends State<CreditCardFormPage> {
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
               DropdownButtonFormField<int>(
                 hint: const Text('Conta para débito da fatura'),
-                items: _accounts.map((acc) => DropdownMenuItem(
-                  value: acc.id,
-                  child: Text(acc.name),
-                )).toList(),
+                items: _accounts.map((acc) => DropdownMenuItem(value: acc.id, child: Text(acc.name))).toList(),
                 onChanged: (val) => setState(() => _selectedAccountId = val),
+                validator: (v) => v == null ? 'Selecione uma conta' : null,
               ),
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: _save,
                 style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
-                child: const Text('Salvar Cartão'),
+                child: const Text('Cadastrar Cartão'),
               ),
             ],
           ),

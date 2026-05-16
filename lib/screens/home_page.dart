@@ -14,12 +14,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-  // Lista de telas principais do aplicativo
   final List<Widget> _pages = [
-    const DashboardView(),        // Resumo (definido abaixo)
-    const TransactionListPage(),  // Lista de Entradas/Saídas
-    const AccountListPage(),      // Bancos e Carteiras
-    const ProfilePage(),          // Perfil e Logout
+    const DashboardView(),
+    const TransactionListPage(),
+    const AccountListPage(),
+    const ProfilePage(),
   ];
 
   @override
@@ -28,7 +27,7 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('FinancialSync', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
       ),
       body: IndexedStack(
         index: _selectedIndex,
@@ -38,8 +37,6 @@ class _HomePageState extends State<HomePage> {
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.blueAccent,
-        unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Início'),
           BottomNavigationBarItem(icon: Icon(Icons.swap_horiz), label: 'Transações'),
@@ -48,22 +45,17 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          // Abre o formulário de transação e atualiza a tela ao voltar
-          await Navigator.push(
+        onPressed: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const TransactionFormPage()),
-          );
-          setState(() {});
-        },
-        tooltip: 'Nova Transação',
+            MaterialPageRoute(builder: (context) => const TransactionFormPage())
+        ).then((_) => setState(() {})),
         child: const Icon(Icons.add),
       ),
     );
   }
 }
 
-// Widget da Dashboard (Pode ser movido para um arquivo separado depois)
+// Visual da Dashboard simplificado para a revisão
 class DashboardView extends StatelessWidget {
   const DashboardView({super.key});
 
@@ -74,33 +66,16 @@ class DashboardView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-              'Resumo Financeiro',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)
-          ),
-          const SizedBox(height: 20),
-
-          _buildSummaryCard('Saldo Total', 'R\$ 0,00', Colors.blue),
+          const Text('Resumo Geral', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          _buildSummaryCard('Saldo Total', 'R\$ 1.250,00', Colors.blue), // Valores estáticos para teste visual
           const SizedBox(height: 12),
-
           Row(
             children: [
-              Expanded(child: _buildSummaryCard('Receitas', 'R\$ 0,00', Colors.green)),
+              Expanded(child: _buildSummaryCard('Receitas', 'R\$ 2.000', Colors.green)),
               const SizedBox(width: 12),
-              Expanded(child: _buildSummaryCard('Despesas', 'R\$ 0,00', Colors.red)),
+              Expanded(child: _buildSummaryCard('Despesas', 'R\$ 750', Colors.red)),
             ],
-          ),
-
-          const SizedBox(height: 30),
-          const Text(
-              'Dicas de Economia',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)
-          ),
-          const Card(
-            child: ListTile(
-              leading: Icon(Icons.lightbulb, color: Colors.orange),
-              title: Text('Evite compras por impulso esta semana.'),
-            ),
           ),
         ],
       ),
@@ -109,19 +84,15 @@ class DashboardView extends StatelessWidget {
 
   Widget _buildSummaryCard(String title, String value, Color color) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      elevation: 4,
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 10),
-            Text(
-                value,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)
-            ),
+            Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
       ),

@@ -13,48 +13,103 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passController = TextEditingController();
+  bool _isLoading = false;
 
   void _doLogin() async {
+    if (_emailController.text.isEmpty || _passController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preencha todos os campos')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
     try {
-      print("Tentando login com: ${_emailController.text}"); // Debug
-      final user = await DatabaseHelper.instance.login(_emailController.text, _passController.text);
+      final user = await DatabaseHelper.instance.login(
+          _emailController.text.trim(),
+          _passController.text
+      );
 
       if (user != null) {
-        print("Login bem-sucedido! ID: ${user.id}"); // Debug
         if (mounted) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
+          // pushReplacement impede que o usuário volte ao login pelo botão "voltar"
+          Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomePage())
+          );
         }
       } else {
-        print("Usuário não encontrado ou senha incorreta."); // Debug
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('E-mail ou senha incorretos!')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('E-mail ou senha incorretos')),
+          );
         }
       }
     } catch (e) {
-      print("ERRO NO LOGIN: $e"); // Isso vai te dizer se a tabela não existe
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao acessar banco de dados: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.sync_alt, size: 80, color: Colors.blueAccent),
-            const Text('FinancialSync', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 40),
-            TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'E-mail')),
-            TextField(controller: _passController, decoration: const InputDecoration(labelText: 'Palavra-passe'), obscureText: true),
-            const SizedBox(height: 20),
-            ElevatedButton(onPressed: _doLogin, child: const Text('Entrar')),
-            TextButton(
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterPage())),
-              child: const Text('Não tem conta? Registe-se'),
-            ),
-          ],
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.sync_alt, size: 100, color: Colors.blueAccent),
+              const SizedBox(height: 16),
+              const Text(
+                'FinancialSync',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 48),
+              TextField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'E-mail',
+                  prefixIcon: Icon(Icons.email),
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _passController,
+                decoration: const InputDecoration(
+                  labelText: 'Senha',
+                  prefixIcon: Icon(Icons.lock),
+                ),
+                obscureText: true,
+              ),
+              const SizedBox(height: 32),
+              _isLoading
+                  ? const CircularProgressIndicator()
+                  : ElevatedButton(
+                onPressed: _doLogin,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 55),
+                ),
+                child: const Text('ENTRAR'),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const RegisterPage())
+                ),
+                child: const Text('Ainda não tem conta? Cadastre-se'),
+              ),
+            ],
+          ),
         ),
       ),
     );

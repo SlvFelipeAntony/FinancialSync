@@ -28,19 +28,26 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
   }
 
   void _loadAccounts() async {
-    // Carrega contas do banco (usando ID de usuário 1 para teste)
     final accounts = await DatabaseHelper.instance.readAllAccounts(1);
     setState(() => _accounts = accounts);
   }
 
   void _save() async {
-    if (_formKey.currentState!.validate() && _selectedAccountId != null) {
+    if (_formKey.currentState!.validate()) {
+      if (_selectedAccountId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Selecione uma conta bancária')),
+        );
+        return;
+      }
+
       final trans = AccountTransaction(
         type: _selectedType,
         description: _descController.text,
         value: double.parse(_valueController.text),
         category: _selectedCategory,
         date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        time: DateFormat('HH:mm:ss').format(DateTime.now()),
         accountsId: _selectedAccountId!,
       );
 
@@ -52,46 +59,50 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Nova Transação')),
-      body: Padding(
+      appBar: AppBar(title: const Text('Nova Movimentação')),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: ListView(
+          child: Column(
             children: [
-              DropdownButtonFormField<String>(
-                value: _selectedType,
-                items: const [
-                  DropdownMenuItem(value: 'entrada', child: Text('Entrada (Receita)')),
-                  DropdownMenuItem(value: 'saida', child: Text('Saída (Despesa)')),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'entrada', label: Text('Receita'), icon: Icon(Icons.add)),
+                  ButtonSegment(value: 'saida', label: Text('Despesa'), icon: Icon(Icons.remove)),
                 ],
-                onChanged: (val) => setState(() => _selectedType = val!),
-                decoration: const InputDecoration(labelText: 'Tipo'),
+                selected: {_selectedType},
+                onSelectionChanged: (val) => setState(() => _selectedType = val.first),
               ),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _descController,
                 decoration: const InputDecoration(labelText: 'Descrição'),
-                validator: (v) => v!.isEmpty ? 'Informe a descrição' : null,
+                validator: (v) => v!.isEmpty ? 'Obrigatório' : null,
               ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _valueController,
                 decoration: const InputDecoration(labelText: 'Valor (R\$)'),
                 keyboardType: TextInputType.number,
                 validator: (v) => v!.isEmpty ? 'Informe o valor' : null,
               ),
+              const SizedBox(height: 16),
               DropdownButtonFormField<int>(
-                hint: const Text('Selecione a Conta'),
+                value: _selectedAccountId,
+                hint: const Text('Selecione a Conta de Origem/Destino'),
                 items: _accounts.map((acc) => DropdownMenuItem(
                   value: acc.id,
                   child: Text(acc.name),
                 )).toList(),
                 onChanged: (val) => setState(() => _selectedAccountId = val),
+                validator: (v) => v == null ? 'Obrigatório' : null,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: _save,
                 style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
-                child: const Text('Salvar Transação'),
+                child: const Text('Confirmar Transação'),
               ),
             ],
           ),

@@ -3,7 +3,7 @@ import '../database/database_helper.dart';
 import '../models/account_model.dart';
 
 class AccountFormPage extends StatefulWidget {
-  final Account? account; // Se passado, a página entra em modo de edição
+  final Account? account;
   const AccountFormPage({super.key, this.account});
 
   @override
@@ -33,7 +33,7 @@ class _AccountFormPageState extends State<AccountFormPage> {
         name: _nameController.text,
         type: _selectedType,
         balance: double.parse(_balanceController.text),
-        userId: 1, // Usuário padrão para o projeto acadêmico
+        userId: 1,
       );
 
       if (widget.account == null) {
@@ -41,8 +41,7 @@ class _AccountFormPageState extends State<AccountFormPage> {
       } else {
         await DatabaseHelper.instance.updateAccount(account);
       }
-
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) Navigator.pop(context);
     }
   }
 
@@ -58,32 +57,28 @@ class _AccountFormPageState extends State<AccountFormPage> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Nome da Conta (Ex: Nubank, Carteira)'),
-                validator: (v) => v!.isEmpty ? 'Informe um nome' : null,
+                decoration: const InputDecoration(labelText: 'Nome da Instituição'),
+                validator: (v) => v!.isEmpty ? 'Obrigatório' : null,
               ),
               DropdownButtonFormField<String>(
                 value: _selectedType,
-                items: const [
-                  DropdownMenuItem(value: 'corrente', child: Text('Conta Corrente')),
-                  DropdownMenuItem(value: 'poupanca', child: Text('Poupança')),
-                  DropdownMenuItem(value: 'investimento', child: Text('Investimento')),
-                  DropdownMenuItem(value: 'carteira', child: Text('Dinheiro em Espécie')),
-                ],
+                items: ['corrente', 'poupanca', 'investimento', 'carteira']
+                    .map((t) => DropdownMenuItem(value: t, child: Text(t.toUpperCase())))
+                    .toList(),
                 onChanged: (val) => setState(() => _selectedType = val!),
-                decoration: const InputDecoration(labelText: 'Tipo de Conta'),
+                decoration: const InputDecoration(labelText: 'Tipo'),
               ),
               TextFormField(
                 controller: _balanceController,
-                decoration: const InputDecoration(labelText: 'Saldo Inicial (R\$)'),
+                decoration: const InputDecoration(labelText: 'Saldo Inicial'),
                 keyboardType: TextInputType.number,
-                validator: (v) => v!.isEmpty ? 'Informe o saldo' : null,
+                validator: (v) => v!.isEmpty ? 'Obrigatório' : null,
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _save,
-                style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
-                child: const Text('Confirmar'),
-              ),
+                child: const Text('Salvar Conta'),
+              )
             ],
           ),
         ),

@@ -16,78 +16,49 @@ class _AccountListPageState extends State<AccountListPage> {
   @override
   void initState() {
     super.initState();
-    _refreshAccounts();
+    _refresh();
   }
 
-  void _refreshAccounts() {
+  void _refresh() {
     setState(() {
-      _accountsFuture = DatabaseHelper.instance.readAllAccounts(1);
+      _accountsFuture = DatabaseHelper.instance.readAllAccounts(1); // Usando ID 1 para teste
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Minhas Contas')),
       body: FutureBuilder<List<Account>>(
         future: _accountsFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('Nenhuma conta cadastrada.'));
-          }
-
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
           final accounts = snapshot.data!;
+
           return ListView.builder(
             itemCount: accounts.length,
             itemBuilder: (context, index) {
               final acc = accounts[index];
               return ListTile(
-                leading: const Icon(Icons.account_balance, color: Colors.blue),
+                leading: const Icon(Icons.account_balance_wallet, color: Colors.blueAccent),
                 title: Text(acc.name),
                 subtitle: Text(acc.type.toUpperCase()),
                 trailing: Text('R\$ ${acc.balance.toStringAsFixed(2)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                onTap: () async {
-                  final result = await Navigator.push(
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => AccountFormPage(account: acc)),
-                  );
-                  if (result == true) _refreshAccounts();
-                },
-                onLongPress: () {
-                  // Opção para deletar
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Excluir conta?'),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-                        TextButton(onPressed: () async {
-                          await DatabaseHelper.instance.deleteAccount(acc.id!);
-                          Navigator.pop(context);
-                          _refreshAccounts();
-                        }, child: const Text('Excluir')),
-                      ],
-                    ),
-                  );
-                },
+                    MaterialPageRoute(builder: (context) => AccountFormPage(account: acc))
+                ).then((_) => _refresh()),
               );
             },
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
-        heroTag: 'add_account',
-        onPressed: () async {
-          final result = await Navigator.push(
+        heroTag: 'addAccount',
+        onPressed: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const AccountFormPage()),
-          );
-          if (result == true) _refreshAccounts();
-        },
+            MaterialPageRoute(builder: (context) => const AccountFormPage())
+        ).then((_) => _refresh()),
         child: const Icon(Icons.add),
       ),
     );
