@@ -5,35 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3ac1fda1-975e-4ebb-9bdb-71e48bd87a3c" name="Changes" comment="Flutter Configuration">
-      <change afterPath="$PROJECT_DIR$/lib/database/database_helper.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/models/account_model.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/models/credit_card_model.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/models/credit_transaction_model.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/models/transaction_model.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/models/user_model.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/screens/account_form_page.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/screens/account_list_page.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/screens/credit_card_form_page.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/screens/credit_card_list_page.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/screens/credit_transaction_form_page.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/screens/home_page.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/screens/invoice_view_page.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/screens/login_page.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/screens/login_screen.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/screens/profile_page.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/screens/register_page.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/screens/transaction_form_page.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/screens/transaction_list_page.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/database/model.mwb" beforeDir="false" afterPath="$PROJECT_DIR$/database/model.mwb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/financialsync.iml" beforeDir="false" afterPath="$PROJECT_DIR$/financialsync.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/main.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/widget_test.dart" beforeDir="false" afterPath="$PROJECT_DIR$/test/widget_test.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/home_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/home_page.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -82,6 +56,7 @@
     "Flutter.main.dart.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.cidr.known.project.marker": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.readMode.enableVisualFormatting": "true",

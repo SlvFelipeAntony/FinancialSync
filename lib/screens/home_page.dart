@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import '../database/database_helper.dart';
-import 'transaction_form_page.dart';
-import 'account_list_page.dart';
 import 'transaction_list_page.dart';
-import 'credit_card_list_page.dart';
-import 'login_page.dart';
+import 'account_list_page.dart';
 import 'profile_page.dart';
+import 'transaction_form_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -17,12 +14,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-  // Lista de telas para a navegação
+  // Lista de telas principais do aplicativo
   final List<Widget> _pages = [
-    const DashboardView(),
-    const TransactionListPage(),
-    const CreditCardListPage(),
-    const ProfilePage(),
+    const DashboardView(),        // Resumo (definido abaixo)
+    const TransactionListPage(),  // Lista de Entradas/Saídas
+    const AccountListPage(),      // Bancos e Carteiras
+    const ProfilePage(),          // Perfil e Logout
   ];
 
   @override
@@ -33,31 +30,40 @@ class _HomePageState extends State<HomePage> {
         centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: _pages[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.blueAccent,
+        unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Início'),
           BottomNavigationBarItem(icon: Icon(Icons.swap_horiz), label: 'Transações'),
-          BottomNavigationBarItem(icon: Icon(Icons.credit_card), label: 'Cartões'),
+          BottomNavigationBarItem(icon: Icon(Icons.account_balance), label: 'Contas'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const TransactionFormPage())
-          ).then((_) => setState(() {})); // Atualiza a home ao voltar
+        onPressed: () async {
+          // Abre o formulário de transação e atualiza a tela ao voltar
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const TransactionFormPage()),
+          );
+          setState(() {});
         },
+        tooltip: 'Nova Transação',
         child: const Icon(Icons.add),
       ),
     );
   }
 }
 
+// Widget da Dashboard (Pode ser movido para um arquivo separado depois)
 class DashboardView extends StatelessWidget {
   const DashboardView({super.key});
 
@@ -68,11 +74,13 @@ class DashboardView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Resumo Geral', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
+          const Text(
+              'Resumo Financeiro',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)
+          ),
+          const SizedBox(height: 20),
 
-          // Card de Saldo Total
-          _buildSummaryCard('Saldo em Contas', 'R\$ 0,00', Colors.blue),
+          _buildSummaryCard('Saldo Total', 'R\$ 0,00', Colors.blue),
           const SizedBox(height: 12),
 
           Row(
@@ -83,9 +91,17 @@ class DashboardView extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 24),
-          const Text('Atividades Recentes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-          // Aqui você pode adicionar um FutureBuilder para listar as últimas transações do SQLite
+          const SizedBox(height: 30),
+          const Text(
+              'Dicas de Economia',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)
+          ),
+          const Card(
+            child: ListTile(
+              leading: Icon(Icons.lightbulb, color: Colors.orange),
+              title: Text('Evite compras por impulso esta semana.'),
+            ),
+          ),
         ],
       ),
     );
@@ -93,15 +109,19 @@ class DashboardView extends StatelessWidget {
 
   Widget _buildSummaryCard(String title, String value, Color color) {
     return Card(
-      elevation: 4,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w500)),
-            const SizedBox(height: 8),
-            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 10),
+            Text(
+                value,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)
+            ),
           ],
         ),
       ),
