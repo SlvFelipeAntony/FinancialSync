@@ -25,11 +25,13 @@ class DatabaseHelper {
       path,
       version: 1,
       onCreate: _createDB,
+      // IMPORTANTE: Ativa as chaves estrangeiras
+      onConfigure: (db) async => await db.execute('PRAGMA foreign_keys = ON'),
     );
   }
 
   Future _createDB(Database db, int version) async {
-    // Tabelas baseadas no arquivo sqlite.sql
+    // Tabela de Usuários
     await db.execute('''
       CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,6 +41,7 @@ class DatabaseHelper {
       )
     ''');
 
+    // Tabela de Contas
     await db.execute('''
       CREATE TABLE accounts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,6 +54,7 @@ class DatabaseHelper {
       )
     ''');
 
+    // Transações de Conta
     await db.execute('''
       CREATE TABLE account_transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,7 +69,34 @@ class DatabaseHelper {
       )
     ''');
 
-    // Adicionar tabelas credit_card e credit_transactions conforme o SQL
+    // Cartões de Crédito (Adicionado conforme seu SQL)
+    await db.execute('''
+      CREATE TABLE credit_card (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        lastdigits TEXT NOT NULL,
+        limit_value REAL NOT NULL,
+        closingdate TEXT NOT NULL,
+        expirationdate TEXT NOT NULL,
+        account_id INTEGER NOT NULL,
+        FOREIGN KEY (account_id) REFERENCES accounts (id) ON DELETE CASCADE
+      )
+    ''');
+
+    // Transações de Cartão de Crédito (Adicionado conforme seu SQL)
+    await db.execute('''
+      CREATE TABLE credit_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL,
+        description TEXT NOT NULL,
+        value REAL NOT NULL,
+        category TEXT NOT NULL,
+        date TEXT NOT NULL,
+        installment INTEGER NOT NULL,
+        credit_card_id INTEGER NOT NULL,
+        FOREIGN KEY (credit_card_id) REFERENCES credit_card (id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   // Exemplo de CRUD para Contas (RF02)

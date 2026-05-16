@@ -5,9 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3ac1fda1-975e-4ebb-9bdb-71e48bd87a3c" name="Changes" comment="Flutter Configuration">
-      <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/screens/home_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/home_page.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/database/database_helper.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/database/database_helper.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/estrutura.txt" beforeDir="false" afterPath="$PROJECT_DIR$/lib/estrutura.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/models/credit_transaction_model.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/models/credit_transaction_model.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/models/transaction_model.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/models/transaction_model.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

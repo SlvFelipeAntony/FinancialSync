@@ -6,6 +6,8 @@ class AccountTransaction {
   final String category;
   final String date;
   final String? time;
+  final String? application;
+  final String? link;
   final int accountsId;
 
   AccountTransaction({
@@ -16,6 +18,8 @@ class AccountTransaction {
     required this.category,
     required this.date,
     this.time,
+    this.application,
+    this.link,
     required this.accountsId,
   });
 
@@ -28,7 +32,24 @@ class AccountTransaction {
       'category': category,
       'date': date,
       'time': time,
+      'application': application,
+      'link': link,
       'accounts_id': accountsId,
     };
+  }
+
+  factory AccountTransaction.fromMap(Map<String, dynamic> map) {
+    return AccountTransaction(
+      id: map['id'],
+      type: map['type'],
+      description: map['description'],
+      value: map['value'],
+      category: map['category'],
+      date: map['date'],
+      time: map['time'],
+      application: map['application'],
+      link: map['link'],
+      accountsId: map['accounts_id'],
+    );
   }
 }
