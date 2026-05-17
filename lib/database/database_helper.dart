@@ -294,57 +294,41 @@ class DatabaseHelper {
     return totalPurchases - totalPayments;
   }
 
-  Future<void> payInvoice(int cardId, int accountId, double amount, String cardName) async {
+  Future<void> payInvoice(int cardId, int accountId, double amount, String cardName, String paymentDate) async {
     final db = await instance.database;
-
     await db.transaction((txn) async {
-      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
       final nowTime = DateFormat('HH:mm:ss').format(DateTime.now());
 
-      // 1. Registra a despesa na conta bancária (Aparece na tela de transações correntes)
       await txn.insert('account_transactions', {
         'type': 'saida',
         'description': 'Pagamento Fatura - $cardName',
         'value': amount,
         'category': 'Cartão de Crédito',
-        'date': today,
+        'date': paymentDate, // Usa a data selecionada
         'time': nowTime,
         'accounts_id': accountId,
       });
 
-      // 2. Deduz o saldo físico da conta bancária escolhida
       final accountQuery = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId]);
       if (accountQuery.isNotEmpty) {
         double currentBalance = (accountQuery.first['balance'] as num).toDouble();
-        await txn.update(
-            'accounts',
-            {'balance': currentBalance - amount},
-            where: 'id = ?',
-            whereArgs: [accountId]
-        );
+        await txn.update('accounts', {'balance': currentBalance - amount}, where: 'id = ?', whereArgs: [accountId]);
       }
 
-      // 3. Registra o crédito na fatura do cartão (Aparece na lista de lançamentos da fatura)
       await txn.insert('credit_transactions', {
         'type': 'entrada',
         'description': 'Pagamento de Fatura',
         'value': amount,
         'category': 'Pagamento',
-        'date': today,
+        'date': paymentDate, // Usa a data selecionada
         'installment': 1,
         'credit_card_id': cardId,
       });
 
-      // 4. Devolve e restabelece o limite disponível do cartão de crédito
       final cardQuery = await txn.query('credit_card', where: 'id = ?', whereArgs: [cardId]);
       if (cardQuery.isNotEmpty) {
         double currentLimit = (cardQuery.first['limit_value'] as num).toDouble();
-        await txn.update(
-            'credit_card',
-            {'limit_value': currentLimit + amount},
-            where: 'id = ?',
-            whereArgs: [cardId]
-        );
+        await txn.update('credit_card', {'limit_value': currentLimit + amount}, where: 'id = ?', whereArgs: [cardId]);
       }
     });
   }
@@ -505,8 +489,33 @@ class DatabaseHelper {
   Future<void> deleteCreditTransaction(CreditTransaction trans) async {
     final db = await instance.database;
     await db.transaction((txn) async {
+
+      // NOVO: Se for um "Pagamento de Fatura", caça a transação na conta bancária e devolve o dinheiro
+      if (trans.category == 'Pagamento' && trans.description == 'Pagamento de Fatura') {
+        final accTransQuery = await txn.query(
+            'account_transactions',
+            where: "category = 'Cartão de Crédito' AND description LIKE 'Pagamento Fatura %' AND value = ? AND date = ?",
+            whereArgs: [trans.value, trans.date]
+        );
+
+        if (accTransQuery.isNotEmpty) {
+          int accTransId = accTransQuery.first['id'] as int;
+          int accId = accTransQuery.first['accounts_id'] as int;
+
+          // Apaga o registro da conta corrente
+          await txn.delete('account_transactions', where: 'id = ?', whereArgs: [accTransId]);
+
+          // Restaura o saldo físico da conta bancária
+          final accQuery = await txn.query('accounts', where: 'id = ?', whereArgs: [accId]);
+          if (accQuery.isNotEmpty) {
+            double bal = (accQuery.first['balance'] as num).toDouble();
+            await txn.update('accounts', {'balance': bal + trans.value}, where: 'id = ?', whereArgs: [accId]);
+          }
+        }
+      }
+
+      // Lógica existente de exclusão de compras/parcelas e estorno de limite de cartão
       if (trans.currentInstallment == 1) {
-        // 1. Busca todas as parcelas do mesmo grupo para calcular o estorno total do limite
         final related = await txn.query(
             'credit_transactions',
             where: 'description = ? AND credit_card_id = ? AND installment = ? AND category = ?',
@@ -518,14 +527,12 @@ class DatabaseHelper {
           totalValueToRollback += (row['value'] as num).toDouble();
         }
 
-        // 2. Apaga o grupo inteiro do banco de dados
         await txn.delete(
             'credit_transactions',
             where: 'description = ? AND credit_card_id = ? AND installment = ? AND category = ?',
             whereArgs: [trans.description, trans.creditCardId, trans.installment, trans.category]
         );
 
-        // 3. Devolve o valor total e exato ao limite disponível do cartão
         final cardQuery = await txn.query('credit_card', where: 'id = ?', whereArgs: [trans.creditCardId]);
         if (cardQuery.isNotEmpty) {
           double currentLimit = (cardQuery.first['limit_value'] as num).toDouble();
@@ -533,7 +540,6 @@ class DatabaseHelper {
           await txn.update('credit_card', {'limit_value': currentLimit + rollback}, where: 'id = ?', whereArgs: [trans.creditCardId]);
         }
       } else {
-        // Blindagem adicional caso tente apagar uma avulsa diretamente
         await txn.delete('credit_transactions', where: 'id = ?', whereArgs: [trans.id]);
       }
     });
@@ -622,6 +628,22 @@ class DatabaseHelper {
       return (result.first['total'] as num).toDouble();
     }
     return trans.value; // Retorno de segurança
+  }
+
+  // --- BUSCA DESPESAS AGRUPADAS POR CATEGORIA (MÊS ATUAL) ---
+  Future<List<Map<String, dynamic>>> getExpensesByCategory() async {
+    final db = await instance.database;
+    final now = DateTime.now();
+    // Cria o filtro do mês atual. Ex: "2026-05%"
+    final monthStr = "${now.year}-${now.month.toString().padLeft(2, '0')}%";
+
+    return await db.rawQuery('''
+      SELECT category, SUM(value) as total 
+      FROM account_transactions 
+      WHERE type = 'saida' AND date LIKE ?
+      GROUP BY category 
+      ORDER BY total DESC
+    ''', [monthStr]);
   }
 }
 

@@ -141,6 +141,8 @@ class _InvoiceViewPageState extends State<InvoiceViewPage> {
                     final tMap = list[index];
                     final transObj = CreditTransaction.fromMap(tMap);
                     final isIncome = transObj.type == 'entrada';
+                    // NOVO: Regra de identificação
+                    final isPayment = transObj.category == 'Pagamento' && transObj.description == 'Pagamento de Fatura';
 
                     String parcelasStr = transObj.installment > 1
                         ? ' • (${transObj.currentInstallment}/${transObj.installment})'
@@ -191,10 +193,17 @@ class _InvoiceViewPageState extends State<InvoiceViewPage> {
                                   _confirmDelete(context, transObj);
                                 }
                               },
-                              itemBuilder: (context) => [
-                                const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit, size: 18), SizedBox(width: 8), Text('Editar Compra')])),
-                                const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, size: 18, color: Colors.red), SizedBox(width: 8), Text('Excluir Compra')])),
-                              ],
+                              itemBuilder: (context) {
+                                if (isPayment) {
+                                  return [
+                                    const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_forever, size: 18, color: Colors.red), SizedBox(width: 8), Text('Desfazer Pagamento')])),
+                                  ];
+                                }
+                                return [
+                                  const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit, size: 18), SizedBox(width: 8), Text('Editar Compra')])),
+                                  const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, size: 18, color: Colors.red), SizedBox(width: 8), Text('Excluir Compra')])),
+                                ];
+                              },
                             )
                           else
                             const SizedBox(width: 40), // Espaço reservado invisível para não quebrar o alinhamento

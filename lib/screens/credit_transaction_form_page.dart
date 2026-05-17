@@ -101,7 +101,7 @@ class _CreditTransactionFormPageState extends State<CreditTransactionFormPage> {
         value: double.parse(cleanValue),
         category: _selectedCategory!,
         date: DateFormat('yyyy-MM-dd').format(_selectedDate),
-        installment: int.parse(_installmentController.text),
+        installment: _selectedType == 'saida' ? int.parse(_installmentController.text) : 1, // Força 1 se for estorno
         creditCardId: _selectedCardId!,
       );
 
@@ -152,15 +152,18 @@ class _CreditTransactionFormPageState extends State<CreditTransactionFormPage> {
                       validator: (v) => v!.isEmpty || v == '0,00' ? 'Obrigatório' : null,
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _installmentController,
-                      decoration: const InputDecoration(labelText: 'Parcelas'),
-                      keyboardType: TextInputType.number,
-                      validator: (v) => int.tryParse(v!) == null ? 'Inválido' : null,
+                  // Oculta o campo de parcelas se for Estorno (entrada)
+                  if (_selectedType == 'saida') ...[
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _installmentController,
+                        decoration: const InputDecoration(labelText: 'Parcelas'),
+                        keyboardType: TextInputType.number,
+                        validator: (v) => int.tryParse(v!) == null ? 'Inválido' : null,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
               const SizedBox(height: 16),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../database/database_helper.dart';
 import '../models/credit_card_model.dart';
 import '../models/account_model.dart';
@@ -18,6 +19,8 @@ class _PayInvoicePageState extends State<PayInvoicePage> {
   int? _selectedAccountId;
   List<Account> _accounts = [];
   bool _isLoading = false;
+
+  DateTime _selectedDate = DateTime.now(); // NOVO: Data do pagamento
 
   @override
   void initState() {
@@ -39,6 +42,7 @@ class _PayInvoicePageState extends State<PayInvoicePage> {
           _selectedAccountId!,
           widget.invoiceTotal,
           widget.card.name,
+          DateFormat('yyyy-MM-dd').format(_selectedDate), // NOVO
         );
 
         if (mounted) {
@@ -106,7 +110,18 @@ class _PayInvoicePageState extends State<PayInvoicePage> {
                 onChanged: (val) => setState(() => _selectedAccountId = val),
                 validator: (v) => v == null ? 'Obrigatório' : null,
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 16),
+              const Text('Data do Pagamento:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _pickDate,
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(DateFormat('dd/MM/yyyy').format(_selectedDate)),
+                ),
+              ),
+              const SizedBox(height: 32), // Espaço antes do botão de confirmar
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : SizedBox(
@@ -121,5 +136,16 @@ class _PayInvoicePageState extends State<PayInvoicePage> {
         ),
       ),
     );
+  }
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
   }
 }

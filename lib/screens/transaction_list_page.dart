@@ -189,6 +189,7 @@ class _TransactionListPageState extends State<TransactionListPage> {
                           );
 
                           final isIncome = transObj.type == 'entrada';
+                          final isInvoicePayment = transObj.category == 'Cartão de Crédito' && transObj.description.startsWith('Pagamento Fatura');
                           String displayTime = (transObj.time != null && transObj.time!.length >= 5)
                               ? transObj.time!.substring(0, 5)
                               : '';
@@ -244,24 +245,32 @@ class _TransactionListPageState extends State<TransactionListPage> {
                                             "${isIncome ? '+' : '-'} R\$ ${transObj.value.toStringAsFixed(2)}",
                                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isIncome ? Colors.green : Colors.red),
                                           ),
-                                          PopupMenuButton<String>(
-                                            icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
-                                            padding: EdgeInsets.zero,
-                                            onSelected: (value) {
-                                              if (value == 'edit') {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(builder: (context) => TransactionFormPage(transaction: transObj)),
-                                                ).then((_) => setState(() {}));
-                                              } else if (value == 'delete') {
-                                                _confirmDeleteTransaction(context, transObj);
-                                              }
-                                            },
-                                            itemBuilder: (context) => [
-                                              const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit, size: 18), SizedBox(width: 8), Text('Editar')])),
-                                              const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, size: 18, color: Colors.red), SizedBox(width: 8), Text('Excluir')])),
-                                            ],
-                                          ),
+                                          // Só exibe os botões se NÃO for pagamento de fatura
+                                          if (!isInvoicePayment) ...[
+                                            PopupMenuButton<String>(
+                                              icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
+                                              padding: EdgeInsets.zero,
+                                              onSelected: (value) {
+                                                if (value == 'edit') {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(builder: (context) => TransactionFormPage(transaction: transObj)),
+                                                  ).then((_) => setState(() {}));
+                                                } else if (value == 'delete') {
+                                                  _confirmDeleteTransaction(context, transObj);
+                                                }
+                                              },
+                                              itemBuilder: (context) => [
+                                                const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit, size: 18), SizedBox(width: 8), Text('Editar')])),
+                                                const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, size: 18, color: Colors.red), SizedBox(width: 8), Text('Excluir')])),
+                                              ],
+                                            ),
+                                          ] else ...[
+                                            const Padding(
+                                              padding: EdgeInsets.only(left: 8.0),
+                                              child: Icon(Icons.lock_outline, size: 16, color: Colors.grey),
+                                            )
+                                          ]
                                         ],
                                       ),
                                     ],
