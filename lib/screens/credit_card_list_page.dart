@@ -30,7 +30,7 @@ class _CreditCardListPageState extends State<CreditCardListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: FutureBuilder<List<CreditCard>>(
-        future: DatabaseHelper.instance.readAllCreditCards(),
+        future: _cardsFuture,
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
           final cards = snapshot.data!;
@@ -47,9 +47,10 @@ class _CreditCardListPageState extends State<CreditCardListPage> {
                   MaterialPageRoute(builder: (context) => InvoiceViewPage(card: card)),
                 ).then((_) => _refresh()),
                 child: Card(
-                  elevation: 8,
+                  elevation: 6,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  color: Colors.blueGrey[900], // Visual "Premium" para cartões
+                  color: Colors.blueGrey[900],
                   child: Container(
                     padding: const EdgeInsets.all(20),
                     height: 180,
@@ -89,6 +90,15 @@ class _CreditCardListPageState extends State<CreditCardListPage> {
             },
           );
         },
+      ),
+      // Adicionado o botão flutuante isolado para criar cartões
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'fab_cards',
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const CreditCardFormPage()),
+        ).then((_) => _refresh()),
+        child: const Icon(Icons.add),
       ),
     );
   }

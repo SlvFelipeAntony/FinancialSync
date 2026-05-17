@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:intl/intl.dart';
 import '../models/account_model.dart';
 import '../models/transaction_model.dart';
 import '../models/credit_card_model.dart';
@@ -222,7 +223,35 @@ class DatabaseHelper {
 
   Future<int> insertCreditTransaction(CreditTransaction trans) async {
     final db = await instance.database;
-    return await db.insert('credit_transactions', trans.toMap());
+    int id = 0;
+
+    await db.transaction((txn) async {
+      // 1. Insere a transação na fatura
+      id = await txn.insert('credit_transactions', trans.toMap());
+
+      // 2. Busca o cartão para atualizar o limite
+      final cardQuery = await txn.query(
+          'credit_card',
+          where: 'id = ?',
+          whereArgs: [trans.creditCardId]
+      );
+
+      if (cardQuery.isNotEmpty) {
+        double currentLimit = (cardQuery.first['limit_value'] as num).toDouble();
+
+        // Se for "saida" (compra), diminui o limite. Se for "entrada" (estorno), aumenta.
+        double adjustment = trans.type == 'saida' ? -trans.value : trans.value;
+
+        // 3. Atualiza o limite do cartão
+        await txn.update(
+          'credit_card',
+          {'limit_value': currentLimit + adjustment},
+          where: 'id = ?',
+          whereArgs: [trans.creditCardId],
+        );
+      }
+    });
+    return id;
   }
 
   Future<List<Map<String, dynamic>>> getInvoiceTransactions(int cardId) async {
@@ -235,13 +264,78 @@ class DatabaseHelper {
     );
   }
 
+  // --- CORREÇÃO: Calcula a fatura subtraindo estornos/pagamentos (entradas) de compras (saídas) ---
   Future<double> getInvoiceTotal(int cardId) async {
     final db = await instance.database;
-    final result = await db.rawQuery(
-        'SELECT SUM(value) as total FROM credit_transactions WHERE credit_card_id = ?',
+
+    final purchases = await db.rawQuery(
+        "SELECT SUM(value) as total FROM credit_transactions WHERE credit_card_id = ? AND type = 'saida'",
         [cardId]
     );
-    return result.first['total'] != null ? result.first['total'] as double : 0.0;
+    final payments = await db.rawQuery(
+        "SELECT SUM(value) as total FROM credit_transactions WHERE credit_card_id = ? AND type = 'entrada'",
+        [cardId]
+    );
+
+    double totalPurchases = (purchases.first['total'] as num?)?.toDouble() ?? 0.0;
+    double totalPayments = (payments.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    return totalPurchases - totalPayments;
+  }
+
+  Future<void> payInvoice(int cardId, int accountId, double amount, String cardName) async {
+    final db = await instance.database;
+
+    await db.transaction((txn) async {
+      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final nowTime = DateFormat('HH:mm:ss').format(DateTime.now());
+
+      // 1. Registra a despesa na conta bancária (Aparece na tela de transações correntes)
+      await txn.insert('account_transactions', {
+        'type': 'saida',
+        'description': 'Pagamento Fatura - $cardName',
+        'value': amount,
+        'category': 'Cartão de Crédito',
+        'date': today,
+        'time': nowTime,
+        'accounts_id': accountId,
+      });
+
+      // 2. Deduz o saldo físico da conta bancária escolhida
+      final accountQuery = await txn.query('accounts', where: 'id = ?', whereArgs: [accountId]);
+      if (accountQuery.isNotEmpty) {
+        double currentBalance = (accountQuery.first['balance'] as num).toDouble();
+        await txn.update(
+            'accounts',
+            {'balance': currentBalance - amount},
+            where: 'id = ?',
+            whereArgs: [accountId]
+        );
+      }
+
+      // 3. Registra o crédito na fatura do cartão (Aparece na lista de lançamentos da fatura)
+      await txn.insert('credit_transactions', {
+        'type': 'entrada',
+        'description': 'Pagamento de Fatura',
+        'value': amount,
+        'category': 'Pagamento',
+        'date': today,
+        'installment': 1,
+        'credit_card_id': cardId,
+      });
+
+      // 4. Devolve e restabelece o limite disponível do cartão de crédito
+      final cardQuery = await txn.query('credit_card', where: 'id = ?', whereArgs: [cardId]);
+      if (cardQuery.isNotEmpty) {
+        double currentLimit = (cardQuery.first['limit_value'] as num).toDouble();
+        await txn.update(
+            'credit_card',
+            {'limit_value': currentLimit + amount},
+            where: 'id = ?',
+            whereArgs: [cardId]
+        );
+      }
+    });
   }
 
   Future<int> createUser(User user) async {
@@ -344,6 +438,96 @@ class DatabaseHelper {
   Future<int> deleteCategory(int id) async {
     final db = await instance.database;
     return await db.delete('categories', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // --- EXCLUSÃO DE TRANSAÇÃO (Estorna o saldo da conta) ---
+  Future<void> deleteTransaction(AccountTransaction trans) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      // 1. Remove a transação do histórico
+      await txn.delete('account_transactions', where: 'id = ?', whereArgs: [trans.id]);
+
+      // 2. Busca o saldo da conta para estornar o valor
+      final accountQuery = await txn.query('accounts', where: 'id = ?', whereArgs: [trans.accountsId]);
+      if (accountQuery.isNotEmpty) {
+        double currentBalance = (accountQuery.first['balance'] as num).toDouble();
+        // Se era uma entrada, removemos do saldo. Se era saída, devolvemos ao saldo.
+        double rollback = trans.type == 'entrada' ? -trans.value : trans.value;
+
+        await txn.update(
+          'accounts',
+          {'balance': currentBalance + rollback},
+          where: 'id = ?',
+          whereArgs: [trans.accountsId],
+        );
+      }
+    });
+  }
+
+  // --- EDIÇÃO DE TRANSAÇÃO (Mescla o estorno do antigo com o novo valor) ---
+  Future<void> updateTransaction(AccountTransaction newTrans, AccountTransaction oldTrans) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      // 1. Atualiza os dados da transação
+      await txn.update('account_transactions', newTrans.toMap(), where: 'id = ?', whereArgs: [newTrans.id]);
+
+      // 2. Desfaz o impacto do saldo antigo
+      final accountQuery = await txn.query('accounts', where: 'id = ?', whereArgs: [newTrans.accountsId]);
+      if (accountQuery.isNotEmpty) {
+        double balance = (accountQuery.first['balance'] as num).toDouble();
+
+        // Remove o efeito da antiga
+        double oldAdjustment = oldTrans.type == 'entrada' ? -oldTrans.value : oldTrans.value;
+        balance += oldAdjustment;
+
+        // Aplica o efeito da nova
+        double newAdjustment = newTrans.type == 'entrada' ? newTrans.value : -newTrans.value;
+        balance += newAdjustment;
+
+        // 3. Salva o saldo final recalculado
+        await txn.update('accounts', {'balance': balance}, where: 'id = ?', whereArgs: [newTrans.accountsId]);
+      }
+    });
+  }
+
+  // --- EXCLUSÃO DE TRANSAÇÃO DO CARTÃO ---
+  Future<void> deleteCreditTransaction(CreditTransaction trans) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      await txn.delete('credit_transactions', where: 'id = ?', whereArgs: [trans.id]);
+
+      final cardQuery = await txn.query('credit_card', where: 'id = ?', whereArgs: [trans.creditCardId]);
+      if (cardQuery.isNotEmpty) {
+        double currentLimit = (cardQuery.first['limit_value'] as num).toDouble();
+        // Se era compra (saída), devolve o limite. Se era estorno (entrada), retira o limite.
+        double rollback = trans.type == 'saida' ? trans.value : -trans.value;
+        await txn.update('credit_card', {'limit_value': currentLimit + rollback}, where: 'id = ?', whereArgs: [trans.creditCardId]);
+      }
+    });
+  }
+
+  // --- EDIÇÃO DE TRANSAÇÃO DO CARTÃO ---
+  Future<void> updateCreditTransaction(CreditTransaction newTrans, CreditTransaction oldTrans) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      await txn.update('credit_transactions', newTrans.toMap(), where: 'id = ?', whereArgs: [newTrans.id]);
+
+      // 1. Desfaz o impacto no cartão antigo
+      final oldCardQuery = await txn.query('credit_card', where: 'id = ?', whereArgs: [oldTrans.creditCardId]);
+      if (oldCardQuery.isNotEmpty) {
+        double limit = (oldCardQuery.first['limit_value'] as num).toDouble();
+        limit += oldTrans.type == 'saida' ? oldTrans.value : -oldTrans.value;
+        await txn.update('credit_card', {'limit_value': limit}, where: 'id = ?', whereArgs: [oldTrans.creditCardId]);
+      }
+
+      // 2. Aplica o impacto no cartão novo (ou no mesmo, caso não tenha trocado)
+      final newCardQuery = await txn.query('credit_card', where: 'id = ?', whereArgs: [newTrans.creditCardId]);
+      if (newCardQuery.isNotEmpty) {
+        double limit = (newCardQuery.first['limit_value'] as num).toDouble();
+        limit += newTrans.type == 'saida' ? -newTrans.value : newTrans.value;
+        await txn.update('credit_card', {'limit_value': limit}, where: 'id = ?', whereArgs: [newTrans.creditCardId]);
+      }
+    });
   }
 }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Máscara de Moeda (Currency Mask)
 import '../database/database_helper.dart';
 import '../models/credit_card_model.dart';
 import '../models/account_model.dart';
@@ -34,10 +35,13 @@ class _CreditCardFormPageState extends State<CreditCardFormPage> {
 
   void _save() async {
     if (_formKey.currentState!.validate() && _selectedAccountId != null) {
+
+      String cleanValue = _limitController.text.replaceAll('.', '').replaceAll(',', '.');
+
       final card = CreditCard(
         name: _nameController.text,
         lastDigits: _digitsController.text,
-        limitValue: double.parse(_limitController.text),
+        limitValue: double.parse(cleanValue),
         closingDate: _closingController.text,
         expirationDate: _expirationController.text,
         accountId: _selectedAccountId!,
@@ -73,8 +77,15 @@ class _CreditCardFormPageState extends State<CreditCardFormPage> {
               ),
               TextFormField(
                 controller: _limitController,
-                decoration: const InputDecoration(labelText: 'Limite Total (R\$)'),
+                decoration: const InputDecoration(
+                  labelText: 'Limite Total (R\$)',
+                  hintText: '0,00',
+                ),
                 keyboardType: TextInputType.number,
+                inputFormatters: [
+                  CurrencyInputFormatter(), // Aplica a nossa máscara mágica aqui!
+                ],
+                validator: (v) => v!.isEmpty || v == '0,00' ? 'Informe o valor' : null,
               ),
               const SizedBox(height: 12),
               Row(
@@ -113,6 +124,35 @@ class _CreditCardFormPageState extends State<CreditCardFormPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class CurrencyInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    // Remove tudo que não for número
+    String numericString = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (numericString.isEmpty) {
+      return const TextEditingValue(text: '', selection: TextSelection.collapsed(offset: 0));
+    }
+
+    // Converte para decimal (ex: digitou 123 -> vira 1.23)
+    double value = double.parse(numericString) / 100;
+
+    // Formata com 2 casas decimais e troca o ponto nativo por vírgula
+    String newText = value.toStringAsFixed(2).replaceAll('.', ',');
+
+    // Adiciona o separador de milhares (ponto)
+    RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
+    List<String> parts = newText.split(',');
+    parts[0] = parts[0].replaceAllMapped(reg, (Match match) => '${match[1]}.');
+    newText = parts.join(',');
+
+    return TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newText.length),
     );
   }
 }

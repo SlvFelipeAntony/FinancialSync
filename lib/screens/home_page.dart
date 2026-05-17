@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import '../database/database_helper.dart';
 import 'transaction_list_page.dart';
 import 'account_list_page.dart';
 import 'profile_page.dart';
-import 'transaction_form_page.dart';
-import 'account_form_page.dart';
+import '../database/database_helper.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,47 +13,14 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
-  int _refreshKey = 0; // 1. Criamos um "gatilho" de atualização
+  int _refreshKey = 0;
 
-  // Removido o 'const' para que as páginas se atualizem quando chamamos setState
   List<Widget> get _pages => [
     DashboardView(key: ValueKey('dash_$_refreshKey')),
     TransactionListPage(key: ValueKey('trans_$_refreshKey')),
-    AccountListPage(key: ValueKey('acc_$_refreshKey')),
+    AccountListPage(key: ValueKey('acc_$_refreshKey')), // Gerencia Contas e Cartões internamente
     const ProfilePage(),
   ];
-
-  Widget? _getFloatingActionButton() {
-    switch (_selectedIndex) {
-      case 0:
-      case 1:
-        return FloatingActionButton(
-          onPressed: () => Navigator.push(
-              context, MaterialPageRoute(builder: (context) => const TransactionFormPage())
-          ).then((_) {
-            // 3. Atualiza o gatilho quando voltar da tela de transação!
-            setState(() {
-              _refreshKey++;
-            });
-          }),
-          child: const Icon(Icons.add),
-        );
-      case 2:
-        return FloatingActionButton(
-          onPressed: () => Navigator.push(
-              context, MaterialPageRoute(builder: (context) => const AccountFormPage())
-          ).then((_) {
-            // 4. Atualiza o gatilho quando voltar da tela de contas!
-            setState(() {
-              _refreshKey++;
-            });
-          }),
-          child: const Icon(Icons.account_balance_wallet),
-        );
-      default:
-        return null;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,26 +30,29 @@ class _HomePageState extends State<HomePage> {
         centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      // O IndexedStack mantém as páginas vivas, mas agora reagem ao setState
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
+        onTap: (index) => setState(() {
+          _selectedIndex = index;
+          _refreshKey++; // Força atualização ao alternar de aba
+        }),
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Início'),
           BottomNavigationBarItem(icon: Icon(Icons.swap_horiz), label: 'Transações'),
-          BottomNavigationBarItem(icon: Icon(Icons.account_balance), label: 'Contas'),
+          BottomNavigationBarItem(icon: Icon(Icons.account_balance), label: 'Carteira'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
         ],
       ),
-      floatingActionButton: _getFloatingActionButton(),
     );
   }
 }
+
+// --- COLOQUE NO FINAL DO ARQUIVO home_page.dart ---
 
 class DashboardView extends StatelessWidget {
   const DashboardView({super.key});
@@ -92,7 +60,7 @@ class DashboardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, double>>(
-      future: DatabaseHelper.instance.getDashboardSummary(), // Procura sempre dados frescos
+      future: DatabaseHelper.instance.getDashboardSummary(),
       builder: (context, snapshot) {
         // Valores padrão enquanto carrega
         double balance = 0.0;

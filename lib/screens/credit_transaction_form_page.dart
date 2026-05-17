@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/services.dart'; // Máscara de Moeda (Currency Mask)
 import '../database/database_helper.dart';
 import '../models/credit_transaction_model.dart';
 import '../models/credit_card_model.dart';
-import '../models/category_model.dart'; // Importação adicionada
+import '../models/category_model.dart';
 
 class CreditTransactionFormPage extends StatefulWidget {
-  const CreditTransactionFormPage({super.key});
+  final CreditTransaction? transaction; // NOVO: Aceita transação para edição
+  const CreditTransactionFormPage({super.key, this.transaction});
 
   @override
   State<CreditTransactionFormPage> createState() => _CreditTransactionFormPageState();
@@ -21,15 +22,40 @@ class _CreditTransactionFormPageState extends State<CreditTransactionFormPage> {
 
   String _selectedType = 'saida';
   int? _selectedCardId;
-  String? _selectedCategory; // Variável para a categoria selecionada
+  String? _selectedCategory;
+  DateTime _selectedDate = DateTime.now();
 
   List<CreditCard> _cards = [];
-  List<CategoryModel> _categories = []; // Lista do banco
+  List<CategoryModel> _categories = [];
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _loadInitialData();
+
+    // NOVO: Preenche os dados se for edição
+    if (widget.transaction != null) {
+      final t = widget.transaction!;
+      _descController.text = t.description;
+      _valueController.text = t.value.toStringAsFixed(2).replaceAll('.', ',');
+      _installmentController.text = t.installment.toString();
+      _selectedType = t.type;
+      _selectedCategory = t.category;
+      _selectedCardId = t.creditCardId;
+      _selectedDate = DateTime.parse(t.date); // <-- ADICIONE ESTA LINHA
+    }
   }
 
   void _loadInitialData() async {
@@ -51,16 +77,22 @@ class _CreditTransactionFormPageState extends State<CreditTransactionFormPage> {
       String cleanValue = _valueController.text.replaceAll('.', '').replaceAll(',', '.');
 
       final trans = CreditTransaction(
+        id: widget.transaction?.id,
         type: _selectedType,
-        description: _descController.text,
+        description: _descController.text.trim(),
         value: double.parse(cleanValue),
-        category: _selectedCategory!, // Salva o nome da categoria vinculada
-        date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        category: _selectedCategory!,
+        date: DateFormat('yyyy-MM-dd').format(_selectedDate),
         installment: int.parse(_installmentController.text),
         creditCardId: _selectedCardId!,
       );
 
-      await DatabaseHelper.instance.insertCreditTransaction(trans);
+      if (widget.transaction == null) {
+        await DatabaseHelper.instance.insertCreditTransaction(trans);
+      } else {
+        await DatabaseHelper.instance.updateCreditTransaction(trans, widget.transaction!);
+      }
+
       if (mounted) Navigator.pop(context, true);
     }
   }
@@ -68,7 +100,7 @@ class _CreditTransactionFormPageState extends State<CreditTransactionFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Gasto no Cartão')),
+      appBar: AppBar(title: Text(widget.transaction == null ? 'Gasto no Cartão' : 'Editar Gasto')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -96,15 +128,10 @@ class _CreditTransactionFormPageState extends State<CreditTransactionFormPage> {
                     flex: 2,
                     child: TextFormField(
                       controller: _valueController,
-                      decoration: const InputDecoration(
-                        labelText: 'Valor (R\$)',
-                        hintText: '0,00',
-                      ),
+                      decoration: const InputDecoration(labelText: 'Valor Total (R\$)'),
                       keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        CurrencyInputFormatter(), // Aplica a nossa máscara mágica aqui!
-                      ],
-                      validator: (v) => v!.isEmpty || v == '0,00' ? 'Informe o valor' : null,
+                      inputFormatters: [CurrencyInputFormatter()],
+                      validator: (v) => v!.isEmpty || v == '0,00' ? 'Obrigatório' : null,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -119,20 +146,23 @@ class _CreditTransactionFormPageState extends State<CreditTransactionFormPage> {
                 ],
               ),
               const SizedBox(height: 16),
-
-              // NOVO: Dropdown de Categorias dinâmicas
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _pickDate,
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text('Data da Compra: ${DateFormat('dd/MM/yyyy').format(_selectedDate)}'),
+                ),
+              ),
+              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
                 hint: const Text('Selecione a Categoria'),
-                items: _categories.map((cat) => DropdownMenuItem(
-                  value: cat.name,
-                  child: Text(cat.name),
-                )).toList(),
+                items: _categories.map((cat) => DropdownMenuItem(value: cat.name, child: Text(cat.name))).toList(),
                 onChanged: (val) => setState(() => _selectedCategory = val),
                 validator: (v) => v == null ? 'Obrigatório' : null,
               ),
               const SizedBox(height: 16),
-
               DropdownButtonFormField<int>(
                 value: _selectedCardId,
                 hint: const Text('Selecione o Cartão'),
@@ -159,28 +189,14 @@ class _CreditTransactionFormPageState extends State<CreditTransactionFormPage> {
 class CurrencyInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    // Remove tudo que não for número
     String numericString = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-
-    if (numericString.isEmpty) {
-      return const TextEditingValue(text: '', selection: TextSelection.collapsed(offset: 0));
-    }
-
-    // Converte para decimal (ex: digitou 123 -> vira 1.23)
+    if (numericString.isEmpty) return const TextEditingValue(text: '', selection: TextSelection.collapsed(offset: 0));
     double value = double.parse(numericString) / 100;
-
-    // Formata com 2 casas decimais e troca o ponto nativo por vírgula
     String newText = value.toStringAsFixed(2).replaceAll('.', ',');
-
-    // Adiciona o separador de milhares (ponto)
     RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
     List<String> parts = newText.split(',');
     parts[0] = parts[0].replaceAllMapped(reg, (Match match) => '${match[1]}.');
     newText = parts.join(',');
-
-    return TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: newText.length),
-    );
+    return TextEditingValue(text: newText, selection: TextSelection.collapsed(offset: newText.length));
   }
 }

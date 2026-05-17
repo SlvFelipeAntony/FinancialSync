@@ -7,7 +7,8 @@ import '../models/account_model.dart';
 import '../models/category_model.dart';
 
 class TransactionFormPage extends StatefulWidget {
-  const TransactionFormPage({super.key});
+  final AccountTransaction? transaction; // Adicione este parâmetro opcional
+  const TransactionFormPage({super.key, this.transaction});
 
   @override
   State<TransactionFormPage> createState() => _TransactionFormPageState();
@@ -37,6 +38,38 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
   void initState() {
     super.initState();
     _loadInitialData();
+
+    if (widget.transaction != null) {
+      final t = widget.transaction!;
+      _descController.text = t.description;
+      _valueController.text = t.value.toStringAsFixed(2).replaceAll('.', ',');
+      _selectedType = t.type;
+      _selectedCategory = t.category;
+      _selectedAccountId = t.accountsId;
+      _selectedDate = DateTime.parse(t.date);
+      _appController.text = t.application ?? '';
+      _linkController.text = t.link ?? '';
+
+      // --- ADICIONE ESTE BLOCO PARA CARREGAR A HORA ---
+      if (t.time != null && t.time!.isNotEmpty) {
+        final parts = t.time!.split(':');
+        _selectedTime = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+      }
+    }
+
+    // Se receber uma transação externa, preenche o formulário em modo EDIÇÃO
+    if (widget.transaction != null) {
+      final t = widget.transaction!;
+      _descController.text = t.description;
+      // Formata o valor bruto double para exibição na máscara customizada
+      _valueController.text = t.value.toStringAsFixed(2).replaceAll('.', ',');
+      _selectedType = t.type;
+      _selectedCategory = t.category;
+      _selectedAccountId = t.accountsId;
+      _selectedDate = DateTime.parse(t.date);
+      _appController.text = t.application ?? '';
+      _linkController.text = t.link ?? '';
+    }
   }
 
   void _loadInitialData() async {
@@ -74,31 +107,30 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
 
   void _save() async {
     if (_formKey.currentState!.validate()) {
-      if (_selectedAccountId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Selecione uma conta bancária'))
-        );
-        return;
-      }
-
-      // Formatação da hora para o padrão do banco (HH:mm:ss)
+      String cleanValue = _valueController.text.replaceAll('.', '').replaceAll(',', '.');
       final formattedTime = '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}:00';
 
-      String cleanValue = _valueController.text.replaceAll('.', '').replaceAll(',', '.');
-
       final trans = AccountTransaction(
+        id: widget.transaction?.id,
         type: _selectedType,
         description: _descController.text.trim(),
-        value: double.parse(cleanValue), // Usa o valor limpo aqui
+        value: double.parse(cleanValue),
         category: _selectedCategory!,
         date: DateFormat('yyyy-MM-dd').format(_selectedDate),
-        time: formattedTime,
+        time: formattedTime, // <-- MUDE PARA ISTO (removeu o widget.transaction?.time)
         application: _appController.text.isEmpty ? null : _appController.text.trim(),
         link: _linkController.text.isEmpty ? null : _linkController.text.trim(),
         accountsId: _selectedAccountId!,
       );
 
-      await DatabaseHelper.instance.insertTransaction(trans);
+      if (widget.transaction == null) {
+        // Nova inserção normal
+        await DatabaseHelper.instance.insertTransaction(trans);
+      } else {
+        // Atualização redefinindo impactos anteriores
+        await DatabaseHelper.instance.updateTransaction(trans, widget.transaction!);
+      }
+
       if (mounted) Navigator.pop(context);
     }
   }
