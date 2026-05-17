@@ -45,16 +45,34 @@ class _CreditTransactionFormPageState extends State<CreditTransactionFormPage> {
     super.initState();
     _loadInitialData();
 
-    // NOVO: Preenche os dados se for edição
+    // Preenche os dados se for edição
     if (widget.transaction != null) {
       final t = widget.transaction!;
       _descController.text = t.description;
-      _valueController.text = t.value.toStringAsFixed(2).replaceAll('.', ',');
       _installmentController.text = t.installment.toString();
       _selectedType = t.type;
       _selectedCategory = t.category;
       _selectedCardId = t.creditCardId;
-      _selectedDate = DateTime.parse(t.date); // <-- ADICIONE ESTA LINHA
+      _selectedDate = DateTime.parse(t.date);
+
+      // 1. Carrega o valor da parcela temporariamente (para compras à vista ou delay rápido)
+      _valueController.text = t.value.toStringAsFixed(2).replaceAll('.', ',');
+
+      // 2. Se for parcelado, busca o valor TOTAL e atualiza o campo
+      if (t.installment > 1) {
+        _loadTotalValue(t);
+      }
+    }
+  }
+
+  // Método assíncrono para buscar o valor cheio da compra
+  void _loadTotalValue(CreditTransaction t) async {
+    double total = await DatabaseHelper.instance.getCreditTransactionGroupTotal(t);
+    if (mounted) {
+      setState(() {
+        // Atualiza o campo com a máscara de moeda correta
+        _valueController.text = total.toStringAsFixed(2).replaceAll('.', ',');
+      });
     }
   }
 

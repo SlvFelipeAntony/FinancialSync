@@ -97,6 +97,7 @@ class DatabaseHelper {
         category TEXT NOT NULL,
         date TEXT NOT NULL,
         installment INTEGER NOT NULL,
+        current_installment INTEGER DEFAULT 1,
         credit_card_id INTEGER NOT NULL,
         FOREIGN KEY (credit_card_id) REFERENCES credit_card (id) ON DELETE CASCADE
       )
@@ -221,65 +222,75 @@ class DatabaseHelper {
     return await db.delete('credit_card', where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<int> insertCreditTransaction(CreditTransaction trans) async {
+  Future<void> insertCreditTransaction(CreditTransaction trans) async {
     final db = await instance.database;
-    int id = 0;
 
     await db.transaction((txn) async {
-      // 1. Insere a transação na fatura
-      id = await txn.insert('credit_transactions', trans.toMap());
+      // --- LÓGICA DE CENTAVOS E PARCELAS ---
+      int totalCents = (trans.value * 100).round();
+      int baseCents = totalCents ~/ trans.installment;
+      int remainderCents = totalCents % trans.installment;
 
-      // 2. Busca o cartão para atualizar o limite
-      final cardQuery = await txn.query(
-          'credit_card',
-          where: 'id = ?',
-          whereArgs: [trans.creditCardId]
-      );
+      DateTime originalDate = DateTime.parse(trans.date);
 
+      for (int i = 1; i <= trans.installment; i++) {
+        // A primeira parcela absorve os centavos restantes para fechar a conta perfeita
+        double instValue = (i == 1) ? (baseCents + remainderCents) / 100.0 : baseCents / 100.0;
+
+        // Calcula o mês correto
+        int totalMonths = originalDate.month - 1 + (i - 1);
+        int targetYear = originalDate.year + (totalMonths ~/ 12);
+        int targetMonth = (totalMonths % 12) + 1;
+        int targetDay = originalDate.day;
+
+        // Garante que não pule para o mês seguinte (ex: 31 de Fev vira 28 de Fev)
+        int daysInMonth = DateTime(targetYear, targetMonth + 1, 0).day;
+        if (targetDay > daysInMonth) targetDay = daysInMonth;
+
+        String instDate = "${targetYear.toString()}-${targetMonth.toString().padLeft(2, '0')}-${targetDay.toString().padLeft(2, '0')}";
+
+        Map<String, dynamic> map = trans.toMap();
+        map['value'] = instValue;
+        map['date'] = instDate;
+        map['current_installment'] = i;
+        map.remove('id');
+
+        await txn.insert('credit_transactions', map);
+      }
+
+      // --- ATUALIZAÇÃO DO LIMITE DO CARTÃO (O TOTAL DA COMPRA) ---
+      final cardQuery = await txn.query('credit_card', where: 'id = ?', whereArgs: [trans.creditCardId]);
       if (cardQuery.isNotEmpty) {
         double currentLimit = (cardQuery.first['limit_value'] as num).toDouble();
-
-        // Se for "saida" (compra), diminui o limite. Se for "entrada" (estorno), aumenta.
         double adjustment = trans.type == 'saida' ? -trans.value : trans.value;
-
-        // 3. Atualiza o limite do cartão
-        await txn.update(
-          'credit_card',
-          {'limit_value': currentLimit + adjustment},
-          where: 'id = ?',
-          whereArgs: [trans.creditCardId],
-        );
+        await txn.update('credit_card', {'limit_value': currentLimit + adjustment}, where: 'id = ?', whereArgs: [trans.creditCardId]);
       }
     });
-    return id;
   }
 
-  Future<List<Map<String, dynamic>>> getInvoiceTransactions(int cardId) async {
+  Future<List<Map<String, dynamic>>> getInvoiceTransactions(int cardId, String yearMonth) async {
     final db = await instance.database;
     return await db.query(
       'credit_transactions',
-      where: 'credit_card_id = ?',
-      whereArgs: [cardId],
+      where: "credit_card_id = ? AND date LIKE ?",
+      whereArgs: [cardId, '$yearMonth-%'],
       orderBy: 'date DESC',
     );
   }
 
   // --- CORREÇÃO: Calcula a fatura subtraindo estornos/pagamentos (entradas) de compras (saídas) ---
-  Future<double> getInvoiceTotal(int cardId) async {
+  Future<double> getInvoiceTotal(int cardId, String yearMonth) async {
     final db = await instance.database;
-
     final purchases = await db.rawQuery(
-        "SELECT SUM(value) as total FROM credit_transactions WHERE credit_card_id = ? AND type = 'saida'",
-        [cardId]
+        "SELECT SUM(value) as total FROM credit_transactions WHERE credit_card_id = ? AND type = 'saida' AND date LIKE ?",
+        [cardId, '$yearMonth-%']
     );
     final payments = await db.rawQuery(
-        "SELECT SUM(value) as total FROM credit_transactions WHERE credit_card_id = ? AND type = 'entrada'",
-        [cardId]
+        "SELECT SUM(value) as total FROM credit_transactions WHERE credit_card_id = ? AND type = 'entrada' AND date LIKE ?",
+        [cardId, '$yearMonth-%']
     );
-
     double totalPurchases = (purchases.first['total'] as num?)?.toDouble() ?? 0.0;
     double totalPayments = (payments.first['total'] as num?)?.toDouble() ?? 0.0;
-
     return totalPurchases - totalPayments;
   }
 
@@ -494,14 +505,36 @@ class DatabaseHelper {
   Future<void> deleteCreditTransaction(CreditTransaction trans) async {
     final db = await instance.database;
     await db.transaction((txn) async {
-      await txn.delete('credit_transactions', where: 'id = ?', whereArgs: [trans.id]);
+      if (trans.currentInstallment == 1) {
+        // 1. Busca todas as parcelas do mesmo grupo para calcular o estorno total do limite
+        final related = await txn.query(
+            'credit_transactions',
+            where: 'description = ? AND credit_card_id = ? AND installment = ? AND category = ?',
+            whereArgs: [trans.description, trans.creditCardId, trans.installment, trans.category]
+        );
 
-      final cardQuery = await txn.query('credit_card', where: 'id = ?', whereArgs: [trans.creditCardId]);
-      if (cardQuery.isNotEmpty) {
-        double currentLimit = (cardQuery.first['limit_value'] as num).toDouble();
-        // Se era compra (saída), devolve o limite. Se era estorno (entrada), retira o limite.
-        double rollback = trans.type == 'saida' ? trans.value : -trans.value;
-        await txn.update('credit_card', {'limit_value': currentLimit + rollback}, where: 'id = ?', whereArgs: [trans.creditCardId]);
+        double totalValueToRollback = 0.0;
+        for (var row in related) {
+          totalValueToRollback += (row['value'] as num).toDouble();
+        }
+
+        // 2. Apaga o grupo inteiro do banco de dados
+        await txn.delete(
+            'credit_transactions',
+            where: 'description = ? AND credit_card_id = ? AND installment = ? AND category = ?',
+            whereArgs: [trans.description, trans.creditCardId, trans.installment, trans.category]
+        );
+
+        // 3. Devolve o valor total e exato ao limite disponível do cartão
+        final cardQuery = await txn.query('credit_card', where: 'id = ?', whereArgs: [trans.creditCardId]);
+        if (cardQuery.isNotEmpty) {
+          double currentLimit = (cardQuery.first['limit_value'] as num).toDouble();
+          double rollback = trans.type == 'saida' ? totalValueToRollback : -totalValueToRollback;
+          await txn.update('credit_card', {'limit_value': currentLimit + rollback}, where: 'id = ?', whereArgs: [trans.creditCardId]);
+        }
+      } else {
+        // Blindagem adicional caso tente apagar uma avulsa diretamente
+        await txn.delete('credit_transactions', where: 'id = ?', whereArgs: [trans.id]);
       }
     });
   }
@@ -510,24 +543,85 @@ class DatabaseHelper {
   Future<void> updateCreditTransaction(CreditTransaction newTrans, CreditTransaction oldTrans) async {
     final db = await instance.database;
     await db.transaction((txn) async {
-      await txn.update('credit_transactions', newTrans.toMap(), where: 'id = ?', whereArgs: [newTrans.id]);
+      // 1. Busca e calcula o montante total gasto no grupo antigo
+      final oldRelated = await txn.query(
+          'credit_transactions',
+          where: 'description = ? AND credit_card_id = ? AND installment = ? AND category = ?',
+          whereArgs: [oldTrans.description, oldTrans.creditCardId, oldTrans.installment, oldTrans.category]
+      );
 
-      // 1. Desfaz o impacto no cartão antigo
+      double totalOldValue = 0.0;
+      for (var row in oldRelated) {
+        totalOldValue += (row['value'] as num).toDouble();
+      }
+
+      // 2. Desfaz o impacto devolvendo o limite total antigo ao cartão de origem
       final oldCardQuery = await txn.query('credit_card', where: 'id = ?', whereArgs: [oldTrans.creditCardId]);
       if (oldCardQuery.isNotEmpty) {
         double limit = (oldCardQuery.first['limit_value'] as num).toDouble();
-        limit += oldTrans.type == 'saida' ? oldTrans.value : -oldTrans.value;
+        limit += oldTrans.type == 'saida' ? totalOldValue : -totalOldValue;
         await txn.update('credit_card', {'limit_value': limit}, where: 'id = ?', whereArgs: [oldTrans.creditCardId]);
       }
 
-      // 2. Aplica o impacto no cartão novo (ou no mesmo, caso não tenha trocado)
+      // 3. Remove todas as parcelas antigas vinculadas
+      await txn.delete(
+          'credit_transactions',
+          where: 'description = ? AND credit_card_id = ? AND installment = ? AND category = ?',
+          whereArgs: [oldTrans.description, oldTrans.creditCardId, oldTrans.installment, oldTrans.category]
+      );
+
+      // 4. Inserção do novo grupo recalculando a distribuição exata de centavos e novas datas
+      int totalCents = (newTrans.value * 100).round();
+      int baseCents = totalCents ~/ newTrans.installment;
+      int remainderCents = totalCents % newTrans.installment;
+
+      DateTime originalDate = DateTime.parse(newTrans.date);
+
+      for (int i = 1; i <= newTrans.installment; i++) {
+        double instValue = (i == 1) ? (baseCents + remainderCents) / 100.0 : baseCents / 100.0;
+
+        int totalMonths = originalDate.month - 1 + (i - 1);
+        int targetYear = originalDate.year + (totalMonths ~/ 12);
+        int targetMonth = (totalMonths % 12) + 1;
+        int targetDay = originalDate.day;
+
+        int daysInMonth = DateTime(targetYear, targetMonth + 1, 0).day;
+        if (targetDay > daysInMonth) targetDay = daysInMonth;
+
+        String instDate = "${targetYear.toString()}-${targetMonth.toString().padLeft(2, '0')}-${targetDay.toString().padLeft(2, '0')}";
+
+        Map<String, dynamic> map = newTrans.toMap();
+        map['value'] = instValue;
+        map['date'] = instDate;
+        map['current_installment'] = i;
+        map.remove('id');
+
+        await txn.insert('credit_transactions', map);
+      }
+
+      // 5. Deduz o limite total atualizado do cartão final selecionado
       final newCardQuery = await txn.query('credit_card', where: 'id = ?', whereArgs: [newTrans.creditCardId]);
       if (newCardQuery.isNotEmpty) {
-        double limit = (newCardQuery.first['limit_value'] as num).toDouble();
-        limit += newTrans.type == 'saida' ? -newTrans.value : newTrans.value;
-        await txn.update('credit_card', {'limit_value': limit}, where: 'id = ?', whereArgs: [newTrans.creditCardId]);
+        double currentLimit = (newCardQuery.first['limit_value'] as num).toDouble();
+        double newAdjustment = newTrans.type == 'saida' ? -newTrans.value : newTrans.value;
+        await txn.update('credit_card', {'limit_value': currentLimit + newAdjustment}, where: 'id = ?', whereArgs: [newTrans.creditCardId]);
       }
     });
+  }
+
+  Future<double> getCreditTransactionGroupTotal(CreditTransaction trans) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'credit_transactions',
+      columns: ['SUM(value) as total'],
+      where: 'description = ? AND credit_card_id = ? AND installment = ? AND category = ?',
+      whereArgs: [trans.description, trans.creditCardId, trans.installment, trans.category],
+    );
+
+    if (result.isNotEmpty && result.first['total'] != null) {
+      return (result.first['total'] as num).toDouble();
+    }
+    return trans.value; // Retorno de segurança
   }
 }
 
