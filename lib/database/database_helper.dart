@@ -5,6 +5,7 @@ import '../models/transaction_model.dart';
 import '../models/credit_card_model.dart';
 import '../models/credit_transaction_model.dart';
 import '../models/user_model.dart';
+import '../models/category_model.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -64,6 +65,8 @@ class DatabaseHelper {
         category TEXT NOT NULL,
         date TEXT NOT NULL,
         time TEXT,
+        application TEXT,  -- Coluna adicionada
+        link TEXT,         -- Coluna adicionada
         accounts_id INTEGER NOT NULL,
         FOREIGN KEY (accounts_id) REFERENCES accounts (id) ON DELETE CASCADE
       )
@@ -97,6 +100,23 @@ class DatabaseHelper {
         FOREIGN KEY (credit_card_id) REFERENCES credit_card (id) ON DELETE CASCADE
       )
     ''');
+
+    // Tabela de Categorias
+    await db.execute('''
+      CREATE TABLE categories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE
+      )
+    ''');
+
+    // Inserir categorias padrão para o usuário não começar do zero
+    List<String> defaultCategories = [
+      'Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Educação', 'Moradia', 'Salário'
+    ];
+
+    for (String cat in defaultCategories) {
+      await db.insert('categories', {'name': cat});
+    }
   }
 
   // Exemplo de CRUD para Contas (RF02)
@@ -115,15 +135,32 @@ class DatabaseHelper {
     final db = await instance.database;
 
     await db.transaction((txn) async {
-      // 1. Insere a transação
+      // 1. Regista a transação
       await txn.insert('account_transactions', trans.toMap());
 
-      // 2. Atualiza o saldo na tabela 'accounts'
-      final double adjustment = trans.type == 'entrada' ? trans.value : -trans.value;
-      await txn.rawUpdate(
-        'UPDATE accounts SET balance = balance + ? WHERE id = ?',
-        [adjustment, trans.accountsId],
+      // 2. Procura o saldo atual da conta
+      final accountQuery = await txn.query(
+          'accounts',
+          where: 'id = ?',
+          whereArgs: [trans.accountsId]
       );
+
+      if (accountQuery.isNotEmpty) {
+        // Converte em 'num' primeiro para evitar erros se o SQLite devolver um 'int'
+        double currentBalance = (accountQuery.first['balance'] as num).toDouble();
+
+        // Calcula o ajuste
+        double adjustment = trans.type == 'entrada' ? trans.value : -trans.value;
+        double newBalance = currentBalance + adjustment;
+
+        // 3. Atualiza a conta com o valor exato calculado
+        await txn.update(
+          'accounts',
+          {'balance': newBalance},
+          where: 'id = ?',
+          whereArgs: [trans.accountsId],
+        );
+      }
     });
   }
 
@@ -224,6 +261,89 @@ class DatabaseHelper {
       return User.fromMap(maps.first);
     }
     return null;
+  }
+
+  Future<double> getTotalBalance() async {
+    final db = await instance.database;
+    final result = await db.rawQuery('SELECT SUM(balance) as total FROM accounts');
+    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  Future<double> getTotalIncome() async {
+    final db = await instance.database;
+    final result = await db.rawQuery("SELECT SUM(value) as total FROM account_transactions WHERE type = 'entrada'");
+    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  Future<double> getTotalExpense() async {
+    final db = await instance.database;
+    final result = await db.rawQuery("SELECT SUM(value) as total FROM account_transactions WHERE type = 'saida'");
+    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  Future<Map<String, double>> getDashboardSummary() async {
+    return {
+      'balance': await getTotalBalance(),
+      'income': await getTotalIncome(),
+      'expense': await getTotalExpense(),
+    };
+  }
+
+  Future<User?> getUser(int id) async {
+    final db = await instance.database;
+    final maps = await db.query('users', where: 'id = ?', whereArgs: [id]);
+    if (maps.isNotEmpty) {
+      return User.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<int> updateUserProfile(int id, String name, String email) async {
+    final db = await instance.database;
+    return await db.update(
+      'users',
+      {'name': name, 'email': email},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> updatePassword(int id, String newPassword) async {
+    final db = await instance.database;
+    return await db.update(
+      'users',
+      {'password': newPassword},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // --- CRUD DE CATEGORIAS ---
+
+  Future<int> createCategory(CategoryModel category) async {
+    final db = await instance.database;
+    return await db.insert('categories', category.toMap());
+  }
+
+  Future<List<CategoryModel>> readAllCategories() async {
+    final db = await instance.database;
+    final result = await db.query('categories', orderBy: 'name COLLATE NOCASE ASC');
+    return result.map((json) => CategoryModel.fromMap(json)).toList();
+  }
+
+  Future<int> updateCategory(CategoryModel category) async {
+    final db = await instance.database;
+    return await db.update(
+      'categories',
+      category.toMap(),
+      where: 'id = ?',
+      whereArgs: [category.id],
+    );
+  }
+
+  Future<int> deleteCategory(int id) async {
+    final db = await instance.database;
+    return await db.delete('categories', where: 'id = ?', whereArgs: [id]);
   }
 }
 

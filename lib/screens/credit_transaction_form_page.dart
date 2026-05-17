@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart'; // Máscara de Moeda (Currency Mask)
 import '../database/database_helper.dart';
 import '../models/credit_transaction_model.dart';
 import '../models/credit_card_model.dart';
+import '../models/category_model.dart'; // Importação adicionada
 
 class CreditTransactionFormPage extends StatefulWidget {
   const CreditTransactionFormPage({super.key});
@@ -17,20 +19,26 @@ class _CreditTransactionFormPageState extends State<CreditTransactionFormPage> {
   final _valueController = TextEditingController();
   final _installmentController = TextEditingController(text: '1');
 
-  String _selectedType = 'saida'; // 'saida' para compra, 'entrada' para estorno
+  String _selectedType = 'saida';
   int? _selectedCardId;
+  String? _selectedCategory; // Variável para a categoria selecionada
+
   List<CreditCard> _cards = [];
-  String _selectedCategory = 'Lazer';
+  List<CategoryModel> _categories = []; // Lista do banco
 
   @override
   void initState() {
     super.initState();
-    _loadCards();
+    _loadInitialData();
   }
 
-  void _loadCards() async {
+  void _loadInitialData() async {
     final cards = await DatabaseHelper.instance.readAllCreditCards();
-    setState(() => _cards = cards);
+    final categories = await DatabaseHelper.instance.readAllCategories();
+    setState(() {
+      _cards = cards;
+      _categories = categories;
+    });
   }
 
   void _save() async {
@@ -40,11 +48,13 @@ class _CreditTransactionFormPageState extends State<CreditTransactionFormPage> {
         return;
       }
 
+      String cleanValue = _valueController.text.replaceAll('.', '').replaceAll(',', '.');
+
       final trans = CreditTransaction(
         type: _selectedType,
         description: _descController.text,
-        value: double.parse(_valueController.text),
-        category: _selectedCategory,
+        value: double.parse(cleanValue),
+        category: _selectedCategory!, // Salva o nome da categoria vinculada
         date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
         installment: int.parse(_installmentController.text),
         creditCardId: _selectedCardId!,
@@ -86,9 +96,15 @@ class _CreditTransactionFormPageState extends State<CreditTransactionFormPage> {
                     flex: 2,
                     child: TextFormField(
                       controller: _valueController,
-                      decoration: const InputDecoration(labelText: 'Valor Total (R\$)'),
+                      decoration: const InputDecoration(
+                        labelText: 'Valor (R\$)',
+                        hintText: '0,00',
+                      ),
                       keyboardType: TextInputType.number,
-                      validator: (v) => v!.isEmpty ? 'Obrigatório' : null,
+                      inputFormatters: [
+                        CurrencyInputFormatter(), // Aplica a nossa máscara mágica aqui!
+                      ],
+                      validator: (v) => v!.isEmpty || v == '0,00' ? 'Informe o valor' : null,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -103,6 +119,20 @@ class _CreditTransactionFormPageState extends State<CreditTransactionFormPage> {
                 ],
               ),
               const SizedBox(height: 16),
+
+              // NOVO: Dropdown de Categorias dinâmicas
+              DropdownButtonFormField<String>(
+                value: _selectedCategory,
+                hint: const Text('Selecione a Categoria'),
+                items: _categories.map((cat) => DropdownMenuItem(
+                  value: cat.name,
+                  child: Text(cat.name),
+                )).toList(),
+                onChanged: (val) => setState(() => _selectedCategory = val),
+                validator: (v) => v == null ? 'Obrigatório' : null,
+              ),
+              const SizedBox(height: 16),
+
               DropdownButtonFormField<int>(
                 value: _selectedCardId,
                 hint: const Text('Selecione o Cartão'),
@@ -111,15 +141,46 @@ class _CreditTransactionFormPageState extends State<CreditTransactionFormPage> {
                 validator: (v) => v == null ? 'Obrigatório' : null,
               ),
               const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _save,
-                style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
-                child: const Text('Confirmar na Fatura'),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _save,
+                  child: const Text('Confirmar na Fatura'),
+                ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class CurrencyInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    // Remove tudo que não for número
+    String numericString = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (numericString.isEmpty) {
+      return const TextEditingValue(text: '', selection: TextSelection.collapsed(offset: 0));
+    }
+
+    // Converte para decimal (ex: digitou 123 -> vira 1.23)
+    double value = double.parse(numericString) / 100;
+
+    // Formata com 2 casas decimais e troca o ponto nativo por vírgula
+    String newText = value.toStringAsFixed(2).replaceAll('.', ',');
+
+    // Adiciona o separador de milhares (ponto)
+    RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
+    List<String> parts = newText.split(',');
+    parts[0] = parts[0].replaceAllMapped(reg, (Match match) => '${match[1]}.');
+    newText = parts.join(',');
+
+    return TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newText.length),
     );
   }
 }

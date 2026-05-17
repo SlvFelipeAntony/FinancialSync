@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../database/database_helper.dart';
 import 'transaction_list_page.dart';
 import 'account_list_page.dart';
 import 'profile_page.dart';
 import 'transaction_form_page.dart';
+import 'account_form_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,13 +15,47 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
+  int _refreshKey = 0; // 1. Criamos um "gatilho" de atualização
 
-  final List<Widget> _pages = [
-    const DashboardView(),
-    const TransactionListPage(),
-    const AccountListPage(),
+  // Removido o 'const' para que as páginas se atualizem quando chamamos setState
+  List<Widget> get _pages => [
+    DashboardView(key: ValueKey('dash_$_refreshKey')),
+    TransactionListPage(key: ValueKey('trans_$_refreshKey')),
+    AccountListPage(key: ValueKey('acc_$_refreshKey')),
     const ProfilePage(),
   ];
+
+  Widget? _getFloatingActionButton() {
+    switch (_selectedIndex) {
+      case 0:
+      case 1:
+        return FloatingActionButton(
+          onPressed: () => Navigator.push(
+              context, MaterialPageRoute(builder: (context) => const TransactionFormPage())
+          ).then((_) {
+            // 3. Atualiza o gatilho quando voltar da tela de transação!
+            setState(() {
+              _refreshKey++;
+            });
+          }),
+          child: const Icon(Icons.add),
+        );
+      case 2:
+        return FloatingActionButton(
+          onPressed: () => Navigator.push(
+              context, MaterialPageRoute(builder: (context) => const AccountFormPage())
+          ).then((_) {
+            // 4. Atualiza o gatilho quando voltar da tela de contas!
+            setState(() {
+              _refreshKey++;
+            });
+          }),
+          child: const Icon(Icons.account_balance_wallet),
+        );
+      default:
+        return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +63,9 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('FinancialSync', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
+      // O IndexedStack mantém as páginas vivas, mas agora reagem ao setState
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
@@ -44,55 +81,67 @@ class _HomePageState extends State<HomePage> {
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const TransactionFormPage())
-        ).then((_) => setState(() {})),
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: _getFloatingActionButton(),
     );
   }
 }
 
-// Visual da Dashboard simplificado para a revisão
 class DashboardView extends StatelessWidget {
   const DashboardView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Resumo Geral', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          _buildSummaryCard('Saldo Total', 'R\$ 1.250,00', Colors.blue), // Valores estáticos para teste visual
-          const SizedBox(height: 12),
-          Row(
+    return FutureBuilder<Map<String, double>>(
+      future: DatabaseHelper.instance.getDashboardSummary(), // Procura sempre dados frescos
+      builder: (context, snapshot) {
+        // Valores padrão enquanto carrega
+        double balance = 0.0;
+        double income = 0.0;
+        double expense = 0.0;
+
+        if (snapshot.hasData) {
+          balance = snapshot.data!['balance'] ?? 0.0;
+          income = snapshot.data!['income'] ?? 0.0;
+          expense = snapshot.data!['expense'] ?? 0.0;
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _buildSummaryCard('Receitas', 'R\$ 2.000', Colors.green)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildSummaryCard('Despesas', 'R\$ 750', Colors.red)),
+              const Text('Resumo Financeiro', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+
+              _buildSummaryCard('Saldo Total', 'R\$ ${balance.toStringAsFixed(2)}', Colors.blue),
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  Expanded(child: _buildSummaryCard('Receitas', 'R\$ ${income.toStringAsFixed(2)}', Colors.green)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildSummaryCard('Despesas', 'R\$ ${expense.toStringAsFixed(2)}', Colors.red)),
+                ],
+              ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildSummaryCard(String title, String value, Color color) {
     return Card(
-      elevation: 4,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w500)),
-            const SizedBox(height: 8),
-            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 10),
+            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           ],
         ),
       ),

@@ -30,7 +30,7 @@ class _CreditCardListPageState extends State<CreditCardListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: FutureBuilder<List<CreditCard>>(
-        future: _cardsFuture,
+        future: DatabaseHelper.instance.readAllCreditCards(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
           final cards = snapshot.data!;
@@ -89,14 +89,6 @@ class _CreditCardListPageState extends State<CreditCardListPage> {
             },
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'addCard',
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const CreditCardFormPage()),
-        ).then((_) => _refresh()),
-        child: const Icon(Icons.add),
       ),
     );
   }

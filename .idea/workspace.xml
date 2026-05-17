@@ -17,20 +17,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3ac1fda1-975e-4ebb-9bdb-71e48bd87a3c" name="Changes" comment="Flutter Configuration">
+      <change afterPath="$PROJECT_DIR$/lib/models/category_model.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/category_form_page.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/category_list_page.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/change_password_page.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/screens/edit_profile_page.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/estrutura.txt" beforeDir="false" afterPath="$PROJECT_DIR$/lib/estrutura.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/database/database_helper.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/database/database_helper.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screens/account_form_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/account_form_page.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screens/account_list_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/account_list_page.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/screens/credit_card_form_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/credit_card_form_page.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screens/credit_card_list_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/credit_card_list_page.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screens/credit_transaction_form_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/credit_transaction_form_page.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screens/home_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/home_page.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/screens/invoice_view_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/invoice_view_page.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/screens/login_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/login_page.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screens/profile_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/profile_page.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/screens/register_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/register_page.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screens/transaction_form_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/transaction_form_page.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/screens/transaction_list_page.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/transaction_list_page.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

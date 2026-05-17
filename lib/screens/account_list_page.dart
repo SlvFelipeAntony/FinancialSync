@@ -29,7 +29,7 @@ class _AccountListPageState extends State<AccountListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: FutureBuilder<List<Account>>(
-        future: _accountsFuture,
+        future: DatabaseHelper.instance.readAllAccounts(1),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
           final accounts = snapshot.data!;
@@ -52,14 +52,6 @@ class _AccountListPageState extends State<AccountListPage> {
             },
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'addAccount',
-        onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AccountFormPage())
-        ).then((_) => _refresh()),
-        child: const Icon(Icons.add),
       ),
     );
   }

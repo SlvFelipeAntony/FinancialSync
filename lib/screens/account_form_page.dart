@@ -77,7 +77,7 @@ class _AccountFormPageState extends State<AccountFormPage> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _save,
-                child: const Text('Salvar Conta'),
+                child: const Text('Confirmar'),
               )
             ],
           ),
